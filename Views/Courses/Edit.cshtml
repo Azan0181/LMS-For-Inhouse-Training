@@ -1,0 +1,64 @@
+@model CourseEditViewModel
+@{
+    ViewData["Title"] = "Edit Course";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="mb-0"><i class="bi bi-pencil me-2"></i>Edit Course</h5>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                    <input type="hidden" asp-for="Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label fw-semibold"></label>
+                        <input asp-for="Title" class="form-control" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label fw-semibold"></label>
+                        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Category" class="form-label fw-semibold"></label>
+                            <input asp-for="Category" class="form-control" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="DifficultyLevel" class="form-label fw-semibold"></label>
+                            <select asp-for="DifficultyLevel" asp-items="Html.GetEnumSelectList<DifficultyLevel>()" class="form-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="EstimatedDurationMinutes" class="form-label fw-semibold"></label>
+                            <input asp-for="EstimatedDurationMinutes" class="form-control" type="number" min="1" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Thumbnail" class="form-label fw-semibold">Replace Thumbnail</label>
+                            <input asp-for="Thumbnail" class="form-control" type="file" accept="image/*" />
+                            @if (!string.IsNullOrEmpty(Model.ExistingThumbnailUrl))
+                            {
+                                <small class="text-muted">Current: <img src="@Model.ExistingThumbnailUrl" height="30" class="ms-1" /></small>
+                            }
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary px-4 py-2"><i class="bi bi-check-lg me-2"></i>Save Changes</button>
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary ms-2 px-4 py-2">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

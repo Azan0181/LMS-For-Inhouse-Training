@@ -1,0 +1,126 @@
+@model List<VoyageFreightLMS.Models.CourseAssignment>
+@{
+    ViewData["Title"] = "Course Assignments";
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <i class="bi bi-clipboard-check-fill text-primary me-2"></i>Course Assignments
+        </h4>
+        <p class="text-muted small mb-0">Manage and audit employee training enrollments across all departments</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn btn-primary shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Assign Course to Employees
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-3 opacity-50"></i>
+                <h5 class="fw-bold">No Course Assignments Found</h5>
+                <p class="small text-muted mb-3">Begin assigning compliance and onboarding courses to your employees.</p>
+                <a asp-action="Create" class="btn btn-primary btn-sm px-4">Assign Course</a>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light small text-uppercase">
+                        <tr>
+                            <th class="ps-4">Employee</th>
+                            <th>Course</th>
+                            <th>Assigned By</th>
+                            <th>Assigned Date</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; font-size: 0.85rem;">
+                                            @item.Employee?.FirstName?.Substring(0, 1)@item.Employee?.LastName?.Substring(0, 1)
+                                        </div>
+                                        <div>
+                                            <a asp-controller="Dashboard" asp-action="EmployeeDetail" asp-route-id="@item.EmployeeId" class="fw-semibold text-dark text-decoration-none">
+                                                @item.Employee?.FullName
+                                            </a>
+                                            <div class="small text-muted">@item.Employee?.Department &bull; @item.Employee?.Email</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <a asp-controller="Courses" asp-action="Details" asp-route-id="@item.CourseId" class="fw-semibold text-decoration-none text-primary">
+                                        @item.Course?.Title
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="small text-muted">@(item.AssignedBy?.FullName ?? "System")</span>
+                                </td>
+                                <td>
+                                    <span class="small text-muted">@item.AssignedAt.ToString("MMM dd, yyyy")</span>
+                                </td>
+                                <td>
+                                    @if (item.DueDate.HasValue)
+                                    {
+                                        var isOverdue = item.DueDate.Value < DateTime.UtcNow && item.Status != VoyageFreightLMS.Models.AssignmentStatus.Completed;
+                                        <span class="small @(isOverdue ? "text-danger fw-bold" : "text-muted")">
+                                            @item.DueDate.Value.ToString("MMM dd, yyyy")
+                                            @if (isOverdue)
+                                            {
+                                                <i class="bi bi-exclamation-triangle ms-1" title="Overdue"></i>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="small text-muted">No deadline</span>
+                                    }
+                                </td>
+                                <td>
+                                    @switch (item.Status)
+                                    {
+                                        case VoyageFreightLMS.Models.AssignmentStatus.Completed:
+                                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Completed
+                                            </span>
+                                            break;
+                                        case VoyageFreightLMS.Models.AssignmentStatus.InProgress:
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1">
+                                                <i class="bi bi-play-circle-fill me-1"></i> In Progress
+                                            </span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                                <i class="bi bi-hourglass me-1"></i> Not Started
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Revoke this course assignment?');" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoke Assignment">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

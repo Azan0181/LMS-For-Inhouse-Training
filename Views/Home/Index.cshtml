@@ -1,0 +1,259 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<h4 class="fw-bold mb-4"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
+
+@* ── EMPLOYEE DASHBOARD ───────────────────────────────────────────── *@
+@if (User.IsInRole("Employee"))
+{
+    var assignments = ViewBag.Assignments as List<VoyageFreightLMS.Models.CourseAssignment>;
+    int completed = ViewBag.CompletedCount;
+    int inProgress = ViewBag.InProgressCount;
+    int pending = ViewBag.PendingCount;
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-warning-subtle text-warning"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@pending</h3>
+                        <small class="text-muted">Not Started</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-play-circle"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@inProgress</h3>
+                        <small class="text-muted">In Progress</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-check-circle"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@completed</h3>
+                        <small class="text-muted">Completed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h5 class="fw-semibold mb-3">My Assigned Courses</h5>
+    @if (assignments?.Any() == true)
+    {
+        <div class="row g-3">
+            @foreach (var a in assignments)
+            {
+                var totalVids = a.Course.Videos.Count;
+                var completedVids = a.VideoProgresses.Count(vp => vp.IsCompleted);
+                var pct = totalVids > 0 ? (int)Math.Round((double)completedVids / totalVids * 100) : 0;
+                var statusBadge = a.Status switch
+                {
+                    AssignmentStatus.NotStarted => "bg-secondary",
+                    AssignmentStatus.InProgress => "bg-primary",
+                    AssignmentStatus.Completed => "bg-success",
+                    _ => "bg-secondary"
+                };
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100 course-card">
+                        @if (!string.IsNullOrEmpty(a.Course.ThumbnailUrl))
+                        {
+                            <img src="@a.Course.ThumbnailUrl" class="card-img-top" style="height:160px;object-fit:cover;" alt="@a.Course.Title" />
+                        }
+                        else
+                        {
+                            <div class="card-img-top bg-gradient d-flex align-items-center justify-content-center" style="height:160px;background:linear-gradient(135deg,#667eea,#764ba2);">
+                                <i class="bi bi-collection-play text-white" style="font-size:3rem;"></i>
+                            </div>
+                        }
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title fw-bold mb-0">@a.Course.Title</h6>
+                                <span class="badge @statusBadge">@a.Status</span>
+                            </div>
+                            <p class="text-muted small mb-2">@totalVids video(s) · @a.Course.EstimatedDurationMinutes min</p>
+                            <div class="progress mb-2" style="height:6px;">
+                                <div class="progress-bar" style="width:@(pct)%"></div>
+                            </div>
+                            <small class="text-muted">@pct% complete</small>
+                        </div>
+                        <div class="card-footer bg-transparent border-0 pb-3">
+                            <a asp-controller="Courses" asp-action="Details" asp-route-id="@a.CourseId" class="btn btn-sm btn-outline-primary w-100">
+                                @(a.Status == AssignmentStatus.NotStarted ? "Start Course" : a.Status == AssignmentStatus.InProgress ? "Continue" : "Review")
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size:3rem;"></i>
+            <p class="mt-2">No courses assigned yet. Check back soon!</p>
+        </div>
+    }
+}
+
+@* ── TRAINER DASHBOARD ────────────────────────────────────────────── *@
+@if (User.IsInRole("Trainer"))
+{
+    var myCourses = ViewBag.MyCourses as List<VoyageFreightLMS.Models.Course>;
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-info-subtle text-info"><i class="bi bi-collection"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@(myCourses?.Count ?? 0)</h3>
+                        <small class="text-muted">My Courses</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-broadcast"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@(myCourses?.Count(c => c.IsPublished) ?? 0)</h3>
+                        <small class="text-muted">Published</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-warning-subtle text-warning"><i class="bi bi-film"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@(myCourses?.Sum(c => c.Videos.Count) ?? 0)</h3>
+                        <small class="text-muted">Total Videos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-semibold mb-0">My Courses</h5>
+        <a asp-controller="Courses" asp-action="Create" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>New Course
+        </a>
+    </div>
+
+    @if (myCourses?.Any() == true)
+    {
+        <div class="row g-3">
+            @foreach (var c in myCourses)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100 course-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="fw-bold mb-0">@c.Title</h6>
+                                <span class="badge @(c.IsPublished ? "bg-success" : "bg-secondary")">
+                                    @(c.IsPublished ? "Published" : "Draft")
+                                </span>
+                            </div>
+                            <p class="text-muted small">@c.Videos.Count video(s) · @c.Assignments.Count assignment(s)</p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0 pb-3">
+                            <a asp-controller="Courses" asp-action="Details" asp-route-id="@c.Id" class="btn btn-sm btn-outline-primary w-100">Manage</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+
+@* ── ADMIN / HR / MANAGER DASHBOARD ──────────────────────────────── *@
+@if (User.IsInRole("Admin") || User.IsInRole("HR") || User.IsInRole("Manager"))
+{
+    int totalCourses = ViewBag.TotalCourses;
+    int totalAssignments = ViewBag.TotalAssignments;
+    int completedAssignments = ViewBag.CompletedAssignments;
+    var completionRate = totalAssignments > 0 ? Math.Round((double)completedAssignments / totalAssignments * 100, 1) : 0;
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-info-subtle text-info"><i class="bi bi-collection"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@totalCourses</h3>
+                        <small class="text-muted">Published Courses</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-clipboard-check"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@totalAssignments</h3>
+                        <small class="text-muted">Assignments</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-check-circle"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@completedAssignments</h3>
+                        <small class="text-muted">Completed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-warning-subtle text-warning"><i class="bi bi-graph-up"></i></div>
+                    <div class="ms-3">
+                        <h3 class="fw-bold mb-0">@completionRate%</h3>
+                        <small class="text-muted">Completion Rate</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <a asp-controller="Dashboard" asp-action="Index" class="card border-0 shadow-sm text-decoration-none quick-link-card">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-bar-chart-line text-primary" style="font-size:2.5rem;"></i>
+                    <h6 class="fw-bold mt-2 text-dark">View Full Reports</h6>
+                    <small class="text-muted">Employee progress, scores & analytics</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a asp-controller="Assignments" asp-action="Create" class="card border-0 shadow-sm text-decoration-none quick-link-card">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-person-plus text-success" style="font-size:2.5rem;"></i>
+                    <h6 class="fw-bold mt-2 text-dark">Assign a Course</h6>
+                    <small class="text-muted">Assign training to employees</small>
+                </div>
+            </a>
+        </div>
+    </div>
+}

@@ -1,0 +1,88 @@
+@model VoyageFreightLMS.Models.ViewModels.CheckpointCreateViewModel
+@{
+    ViewData["Title"] = "Add Quiz Checkpoint";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7 col-xl-6">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <a asp-action="Manage" asp-route-videoId="@Model.VideoId" class="btn btn-sm btn-outline-secondary mb-2">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Checkpoints
+                </a>
+                <h4 class="fw-bold mb-0">
+                    <i class="bi bi-flag-fill text-warning me-2"></i>Add Quiz Checkpoint
+                </h4>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4 p-md-5">
+                <div class="bg-warning-subtle text-warning-emphasis p-3 rounded-3 mb-4 d-flex align-items-start gap-3 border border-warning-subtle">
+                    <i class="bi bi-shield-lock-fill fs-4 mt-1"></i>
+                    <div class="small">
+                        <strong class="d-block mb-1">Unskippable Checkpoint Rule</strong>
+                        When an employee reaches this timestamp during playback, the video will automatically pause and lock. The employee must answer the quiz questions and achieve the passing score to continue.
+                    </div>
+                </div>
+
+                <form asp-action="CreateCheckpoint" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="VideoId" />
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label fw-semibold">Checkpoint Title <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-bookmark-star"></i></span>
+                            <input asp-for="Title" class="form-control border-start-0" placeholder="e.g. Checkpoint 1: Cargo Stacking Protocols" />
+                        </div>
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="TimestampSeconds" class="form-label fw-semibold">Trigger Timestamp (Seconds) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-stopwatch"></i></span>
+                                <input asp-for="TimestampSeconds" type="number" class="form-control border-start-0" min="1" id="timeSecInput" placeholder="e.g. 120" />
+                            </div>
+                            <div class="form-text small" id="timeConverted">Equal to: 00:00 (mm:ss)</div>
+                            <span asp-validation-for="TimestampSeconds" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PassingScorePercent" class="form-label fw-semibold">Passing Score (%)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-percent"></i></span>
+                                <input asp-for="PassingScorePercent" type="number" class="form-control border-start-0" min="0" max="100" />
+                            </div>
+                            <div class="form-text small">Default 100% required to pass</div>
+                            <span asp-validation-for="PassingScorePercent" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Manage" asp-route-videoId="@Model.VideoId" class="btn btn-light px-4">Cancel</a>
+                        <button type="submit" class="btn btn-warning px-4 shadow-sm fw-semibold">
+                            <i class="bi bi-check2-circle me-1"></i> Save Checkpoint
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('timeSecInput').addEventListener('input', function () {
+            const sec = parseInt(this.value) || 0;
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            document.getElementById('timeConverted').textContent = `Equal to: ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} (mm:ss)`;
+        });
+    </script>
+}

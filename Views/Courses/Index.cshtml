@@ -1,0 +1,72 @@
+@model List<VoyageFreightLMS.Models.Course>
+@{
+    ViewData["Title"] = "Courses";
+    var assignments = ViewBag.Assignments as Dictionary<int, VoyageFreightLMS.Models.CourseAssignment>;
+    bool isTrainer = ViewBag.IsTrainer;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-collection-play me-2"></i>Courses</h4>
+    @if (isTrainer)
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>New Course
+        </a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-collection" style="font-size:3rem;"></i>
+        <p class="mt-2">No courses available yet.</p>
+    </div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var course in Model)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100 course-card">
+                    @if (!string.IsNullOrEmpty(course.ThumbnailUrl))
+                    {
+                        <img src="@course.ThumbnailUrl" class="card-img-top" style="height:180px;object-fit:cover;" alt="@course.Title" />
+                    }
+                    else
+                    {
+                        <div class="card-img-top d-flex align-items-center justify-content-center" style="height:180px;background:linear-gradient(135deg,#667eea,#764ba2);">
+                            <i class="bi bi-collection-play text-white" style="font-size:3rem;"></i>
+                        </div>
+                    }
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h6 class="card-title fw-bold mb-0">@course.Title</h6>
+                            @if (isTrainer)
+                            {
+                                <span class="badge @(course.IsPublished ? "bg-success" : "bg-secondary") ms-2">
+                                    @(course.IsPublished ? "Published" : "Draft")
+                                </span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(course.Category))
+                        {
+                            <span class="badge bg-light text-dark mb-2">@course.Category</span>
+                        }
+                        <p class="text-muted small mb-2">@(course.Description?.Length > 100 ? course.Description[..100] + "…" : course.Description)</p>
+                        <div class="d-flex gap-2 text-muted small">
+                            <span><i class="bi bi-film me-1"></i>@course.Videos.Count video(s)</span>
+                            <span><i class="bi bi-clock me-1"></i>@course.EstimatedDurationMinutes min</span>
+                            <span class="badge bg-light text-dark">@course.DifficultyLevel</span>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pb-3">
+                        <a asp-action="Details" asp-route-id="@course.Id" class="btn btn-sm btn-outline-primary w-100">
+                            @(isTrainer ? "Manage" : "View Details")
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -1,0 +1,101 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Sign In";
+    Layout = "_Layout";
+}
+
+<div class="login-stage">
+    <!-- Atmospheric Ambient Lighting -->
+    <div class="auth-bg-ambient" aria-hidden="true">
+        <div class="glow-orb glow-orb-1"></div>
+        <div class="glow-orb glow-orb-2"></div>
+        <div class="glow-orb glow-orb-3"></div>
+        <div class="auth-grid-overlay"></div>
+    </div>
+
+    <!-- Glassmorphic Login Card -->
+    <div class="glass-login-card">
+        <div class="auth-brand-wrapper">
+            <div class="auth-logo-badge" title="Voyage Freight Technologies">
+                <img src="~/images/logo.png" alt="Voyage Freight Logo" class="auth-logo-img" />
+            </div>
+            <h1 class="auth-heading">Voyage Freight</h1>
+            <p class="auth-subheading">Sign in to your learning & compliance portal</p>
+        </div>
+
+        <form asp-action="Login" method="post" id="loginForm" novalidate>
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ErrorCount > 0)
+            {
+                <div class="glass-validation-summary" role="alert">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span class="fw-semibold">Please check your input</span>
+                    </div>
+                    <div asp-validation-summary="All"></div>
+                </div>
+            }
+
+            <div class="glass-field-group">
+                <label asp-for="Email" class="glass-field-label">Email Address</label>
+                <div class="glass-input-wrapper">
+                    <span class="glass-input-icon">
+                        <i class="bi bi-envelope"></i>
+                    </span>
+                    <input asp-for="Email" class="glass-form-control" placeholder="you@voyagefreight.com" autocomplete="email" autofocus required />
+                </div>
+                <span asp-validation-for="Email" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <div class="glass-field-group">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label asp-for="Password" class="glass-field-label mb-0">Password</label>
+                </div>
+                <div class="glass-input-wrapper">
+                    <span class="glass-input-icon">
+                        <i class="bi bi-shield-lock"></i>
+                    </span>
+                    <input asp-for="Password" id="passwordInput" type="password" class="glass-form-control" placeholder="••••••••" autocomplete="current-password" required />
+                    <button type="button" class="glass-pw-toggle" id="togglePasswordBtn" title="Toggle password visibility" tabindex="-1">
+                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                    </button>
+                </div>
+                <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <div class="glass-check-wrapper">
+                <input asp-for="RememberMe" class="glass-checkbox" id="rememberMeCheck" />
+                <label asp-for="RememberMe" class="glass-check-label" for="rememberMeCheck">Keep me signed in on this device</label>
+            </div>
+
+            <button type="submit" class="btn-glass-submit" id="submitBtn">
+                <span>Sign In to LMS</span>
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <span>&copy; @DateTime.Now.Year Voyage Freight Technologies. All rights reserved.</span>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggleBtn = document.getElementById('togglePasswordBtn');
+            const passwordInput = document.getElementById('passwordInput');
+            const toggleIcon = document.getElementById('togglePasswordIcon');
+
+            if (toggleBtn && passwordInput && toggleIcon) {
+                toggleBtn.addEventListener('click', function () {
+                    const isPassword = passwordInput.getAttribute('type') === 'password';
+                    passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+                    toggleIcon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+                });
+            }
+        });
+    </script>
+}

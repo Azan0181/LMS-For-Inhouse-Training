@@ -1,0 +1,138 @@
+@model VoyageFreightLMS.Models.ViewModels.EmployeeDetailViewModel
+@{
+    ViewData["Title"] = $"Performance - {Model.Employee.FullName}";
+}
+
+<div class="mb-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-2">
+                <i class="bi bi-arrow-left me-1"></i> Back to Reports
+            </a>
+            <h4 class="fw-bold mb-0">
+                <i class="bi bi-person-badge-fill text-primary me-2"></i>Employee Training Record
+            </h4>
+        </div>
+        <div>
+            <a asp-controller="Assignments" asp-action="Create" class="btn btn-primary shadow-sm btn-sm">
+                <i class="bi bi-plus-circle me-1"></i> Assign New Course
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Header Card -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+        <div class="row align-items-center g-4">
+            <div class="col-md-7 d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center shadow-sm" style="width: 64px; height: 64px; font-size: 1.5rem;">
+                    @Model.Employee.FirstName?.Substring(0, 1)@Model.Employee.LastName?.Substring(0, 1)
+                </div>
+                <div>
+                    <h4 class="fw-bold mb-1">@Model.Employee.FullName</h4>
+                    <div class="text-muted small">
+                        <i class="bi bi-briefcase me-1"></i>@(Model.Employee.JobTitle ?? "Staff") &bull;
+                        <i class="bi bi-building me-1"></i>@(Model.Employee.Department ?? "Operations") &bull;
+                        <i class="bi bi-envelope me-1"></i>@Model.Employee.Email
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="row g-2 text-center">
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded-3">
+                            <span class="text-muted small d-block mb-1">Assigned Courses</span>
+                            <h4 class="fw-bold mb-0 text-dark">@Model.TotalAssigned</h4>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded-3">
+                            <span class="text-muted small d-block mb-1">Completed</span>
+                            <h4 class="fw-bold mb-0 text-success">@Model.TotalCompleted</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignments & Performance Breakdown -->
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-header bg-white border-bottom py-3 px-4">
+        <h5 class="fw-bold mb-0">Assigned Training Courses & Video Checkpoints</h5>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.Assignments.Any())
+        {
+            <div class="text-center py-5 text-muted small">
+                No courses currently assigned to this employee.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light small text-uppercase">
+                        <tr>
+                            <th class="ps-4">Course</th>
+                            <th>Enrolled On</th>
+                            <th>Modules Completed</th>
+                            <th style="width: 180px;">Progress</th>
+                            <th>Avg Quiz Score</th>
+                            <th class="text-end pe-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var detail in Model.Assignments)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <a asp-controller="Courses" asp-action="Details" asp-route-id="@detail.Assignment.CourseId" class="fw-semibold text-primary text-decoration-none">
+                                        @detail.Assignment.Course?.Title
+                                    </a>
+                                    <div class="small text-muted">@detail.Assignment.Course?.Category</div>
+                                </td>
+                                <td class="small text-muted">
+                                    @detail.Assignment.AssignedAt.ToString("MMM dd, yyyy")
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        @detail.VideosCompleted / @detail.TotalVideos Modules
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 6px;">
+                                            <div class="progress-bar @(detail.ProgressPercent == 100 ? "bg-success" : "bg-primary")" role="progressbar" style="width: @detail.ProgressPercent%;"></div>
+                                        </div>
+                                        <span class="small fw-semibold">@detail.ProgressPercent%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (detail.AverageQuizScore > 0)
+                                    {
+                                        <span class="badge @(detail.AverageQuizScore >= 80 ? "bg-success-subtle text-success border border-success" : "bg-warning-subtle text-warning-emphasis border border-warning")">
+                                            @detail.AverageQuizScore%
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">No quizzes taken</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <span class="badge @(detail.Assignment.Status == VoyageFreightLMS.Models.AssignmentStatus.Completed ? "bg-success" : (detail.Assignment.Status == VoyageFreightLMS.Models.AssignmentStatus.InProgress ? "bg-warning text-dark" : "bg-secondary")) rounded-pill">
+                                        @detail.Assignment.Status
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

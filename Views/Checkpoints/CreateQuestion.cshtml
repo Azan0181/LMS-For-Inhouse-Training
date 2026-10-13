@@ -1,0 +1,89 @@
+@model VoyageFreightLMS.Models.ViewModels.QuestionCreateViewModel
+@{
+    var checkpoint = ViewBag.Checkpoint as VoyageFreightLMS.Models.QuizCheckpoint;
+    ViewData["Title"] = "Add Question to Checkpoint";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <a asp-action="Manage" asp-route-videoId="@checkpoint?.VideoId" class="btn btn-sm btn-outline-secondary mb-2">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Checkpoints
+                </a>
+                <h4 class="fw-bold mb-0">
+                    <i class="bi bi-question-circle-fill text-primary me-2"></i>Add Question to Checkpoint
+                </h4>
+            </div>
+            @if (checkpoint != null)
+            {
+                <span class="badge bg-warning-subtle text-dark border border-warning px-3 py-2 rounded-pill">
+                    <i class="bi bi-bookmark me-1"></i> @checkpoint.Title
+                </span>
+            }
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4 p-md-5">
+                <form asp-action="CreateQuestion" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="CheckpointId" />
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="QuestionText" class="form-label fw-semibold">Question Prompt <span class="text-danger">*</span></label>
+                        <textarea asp-for="QuestionText" class="form-control" rows="3" placeholder="e.g. What is the maximum load weight permitted before securing secondary straps?"></textarea>
+                        <span asp-validation-for="QuestionText" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Points" class="form-label fw-semibold">Points</label>
+                        <div class="input-group" style="max-width: 180px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-award"></i></span>
+                            <input asp-for="Points" type="number" class="form-control border-start-0" min="1" max="100" />
+                        </div>
+                        <span asp-validation-for="Points" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="form-label fw-semibold mb-0">Answer Options & Correct Answer <span class="text-danger">*</span></label>
+                            <span class="small text-muted">Select the radio button beside the correct answer</span>
+                        </div>
+
+                        <div class="bg-light p-3 rounded-3 border">
+                            @for (int i = 0; i < Model.Options.Count; i++)
+                            {
+                                <div class="mb-3 last-mb-0">
+                                    <div class="input-group">
+                                        <div class="input-group-text bg-white">
+                                            <input class="form-check-input mt-0" type="radio" name="CorrectOptionIndex" value="@i" @(Model.CorrectOptionIndex == i ? "checked" : "") title="Mark this as the correct answer" />
+                                        </div>
+                                        <span class="input-group-text bg-white text-muted fw-semibold" style="width: 45px;">
+                                            @((char)('A' + i))
+                                        </span>
+                                        <input type="text" name="Options[@i]" value="@Model.Options[i]" class="form-control" placeholder="Option @((char)('A' + i)) text..." />
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="form-text small mt-1">Provide at least 2 non-empty options and indicate which option is correct.</div>
+                        <span asp-validation-for="CorrectOptionIndex" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Manage" asp-route-videoId="@checkpoint?.VideoId" class="btn btn-light px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                            <i class="bi bi-plus-lg me-1"></i> Save Question
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

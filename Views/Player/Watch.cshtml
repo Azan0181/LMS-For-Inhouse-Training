@@ -1,0 +1,745 @@
+@model VoyageFreightLMS.Models.ViewModels.VideoPlayerViewModel
+@{
+    ViewData["Title"] = $"{Model.Video.Title} - {Model.Course.Title}";
+    var initialPosition = Model.Progress?.LastWatchedPositionSeconds ?? 0;
+    var isVideoCompleted = Model.Progress?.IsCompleted ?? false;
+}
+
+<div class="container-fluid px-0">
+    <!-- Top Bar Navigation -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 px-3">
+        <div class="d-flex align-items-center gap-3">
+            <a asp-controller="Courses" asp-action="Details" asp-route-id="@Model.Course.Id" class="btn btn-sm btn-white border shadow-sm rounded-pill px-3 py-2 text-dark">
+                <i class="bi bi-arrow-left me-1"></i> Course Overview
+            </a>
+            <div>
+                <div class="text-xs text-muted text-uppercase fw-semibold tracking-wider">
+                    @Model.Course.Title &bull; Module @(Model.Video.OrderIndex + 1)
+                </div>
+                <h4 class="fw-bold mb-0 text-dark">@Model.Video.Title</h4>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <span id="moduleCompletedBadge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-semibold @(isVideoCompleted ? "" : "d-none")">
+                <i class="bi bi-patch-check-fill me-1"></i> Module Completed
+            </span>
+            <button type="button" id="btnFinishModule" class="btn btn-sm btn-outline-success fw-semibold px-3 py-2 rounded-pill @(isVideoCompleted ? "d-none" : "")">
+                <i class="bi bi-check2-circle me-1"></i> Complete Module
+            </button>
+            @if (Model.PreviousVideo != null)
+            {
+                <a asp-action="Watch" asp-route-videoId="@Model.PreviousVideo.Id" asp-route-assignmentId="@Model.Assignment.Id" class="btn btn-sm btn-light border rounded-pill px-3 py-2">
+                    <i class="bi bi-chevron-left me-1"></i> Previous
+                </a>
+            }
+            @if (Model.NextVideo != null)
+            {
+                <a asp-action="Watch" asp-route-videoId="@Model.NextVideo.Id" asp-route-assignmentId="@Model.Assignment.Id" class="btn btn-sm btn-primary rounded-pill px-3 py-2">
+                    Next <i class="bi bi-chevron-right ms-1"></i>
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Main Player Area -->
+    <div class="row g-4 px-3">
+        <!-- Video Player Column -->
+        <div class="col-xl-9 col-lg-8">
+            <div class="card border-0 shadow-lg video-player-card position-relative">
+                <div class="ratio ratio-16x9">
+                    <video id="lmsVideo" class="w-100 h-100" controls preload="metadata" controlsList="nodownload">
+                        <source src="@Model.Video.VideoUrl" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+
+                <!-- Floating Review Banner for Rewatching Video Segment -->
+                <div id="reviewBanner" class="position-absolute top-0 start-0 w-100 text-white py-2 px-4 d-flex justify-content-between align-items-center" style="z-index: 1045; display: none;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="spinner-grow spinner-grow-sm text-warning" role="status"></span>
+                        <span class="small fw-medium">Reviewing video for <strong class="text-warning"><span id="reviewCpTitle">Checkpoint</span></strong> &bull; Forward skipping locked</span>
+                    </div>
+                    <button type="button" id="btnReturnToQuiz" class="btn btn-warning btn-sm fw-bold px-3 shadow-sm rounded-pill">
+                        <i class="bi bi-patch-question-fill me-1"></i> Return to Quiz
+                    </button>
+                </div>
+
+                <!-- Live Alert Overlay for Checkpoint -->
+                <div id="checkpointOverlay" class="quiz-overlay position-absolute top-0 start-0 w-100 h-100 p-3 p-md-4" style="z-index: 1050; display: none;">
+                    <div class="card quiz-modal-card w-100" style="max-width: 650px; max-height: 90vh;">
+                        <div class="card-header quiz-header d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="brand-icon-box" style="background: var(--amber-gradient); box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
+                                    <i class="bi bi-shield-lock-fill"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-white" id="overlayCpTitle">Checkpoint Triggered</h5>
+                                    <small class="text-white-50" id="overlayCpMeta">Answer required to proceed</small>
+                                </div>
+                            </div>
+                            <span class="badge quiz-header-badge rounded-pill px-3 py-2" id="overlayPassingBadge">100% Required</span>
+                        </div>
+
+                        <div class="card-body p-4 overflow-auto bg-light" id="quizBody" style="max-height: calc(90vh - 160px);">
+                            <!-- Questions dynamically injected here -->
+                        </div>
+
+                        <div class="card-footer quiz-footer d-flex justify-content-between align-items-center">
+                            <div id="quizFeedback" class="small fw-semibold"></div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" id="btnRewatchSegment" class="btn btn-outline-secondary fw-semibold px-3 shadow-sm" title="Rewatch previous video part to find the answer">
+                                    <i class="bi bi-arrow-counterclockwise me-1 text-primary"></i> Rewatch Video Part
+                                </button>
+                                <button type="button" id="btnSubmitQuiz" class="btn btn-primary fw-bold px-4 shadow-sm">
+                                    <i class="bi bi-send-check me-1"></i> Submit Answers
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Completion Overlay -->
+                <div id="completionOverlay" class="quiz-overlay position-absolute top-0 start-0 w-100 h-100 p-4" style="z-index: 1040; display: none;">
+                    <div class="text-center text-white p-5 rounded-4 shadow-lg border border-white-subtle" style="max-width: 520px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px);">
+                        <div class="rounded-circle d-inline-flex p-3 mb-3 shadow" style="background: var(--success-gradient);">
+                            <i class="bi bi-trophy-fill" style="font-size: 3rem; color: #fff;"></i>
+                        </div>
+                        <h3 class="fw-bold mb-2">Module Completed!</h3>
+                        <p class="text-white-50 mb-4 small">
+                            You've passed all mandatory checkpoints and successfully completed this training module.
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a asp-controller="Courses" asp-action="Details" asp-route-id="@Model.Course.Id" class="btn btn-outline-light px-4 rounded-pill">
+                                <i class="bi bi-list-check me-1"></i> Course Menu
+                            </a>
+                            @if (Model.NextVideo != null)
+                            {
+                                <a asp-action="Watch" asp-route-videoId="@Model.NextVideo.Id" asp-route-assignmentId="@Model.Assignment.Id" class="btn btn-success px-4 fw-semibold rounded-pill shadow">
+                                    Next Module <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Info & Security Notice -->
+            <div class="card border-0 shadow-sm rounded-4 mt-3">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <h5 class="fw-bold mb-0">@Model.Video.Title</h5>
+                        <span class="badge bg-light text-muted border">
+                            <i class="bi bi-lock-fill text-warning me-1"></i> Anti-Skip Enabled
+                        </span>
+                    </div>
+                    <p class="text-muted mb-0">@(Model.Video.Description ?? "No description provided for this module.")</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Checkpoint Progress Column -->
+        <div class="col-xl-3 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 mb-3">
+                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-geo-alt-fill text-primary me-2"></i>Checkpoint Timeline
+                        </h6>
+                        <small class="text-muted">Mandatory quiz milestones</small>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
+                        @Model.Checkpoints.Count Milestones
+                    </span>
+                </div>
+                <div class="card-body p-3">
+                    @if (!Model.Checkpoints.Any())
+                    {
+                        <div class="text-center py-4 text-muted small">
+                            <i class="bi bi-info-circle fs-3 d-block mb-2 text-secondary"></i>
+                            No checkpoints assigned to this module. Watch freely!
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var cpItem in Model.Checkpoints)
+                            {
+                                var minutes = cpItem.Checkpoint.TimestampSeconds / 60;
+                                var seconds = cpItem.Checkpoint.TimestampSeconds % 60;
+                                var timeFormatted = $"{minutes:D2}:{seconds:D2}";
+
+                                <div class="list-group-item p-3 rounded-3 mb-2 checkpoint-sidebar-item @(cpItem.IsPassed ? "bg-success-subtle border-success-subtle" : "border")" id="cp-item-@cpItem.Checkpoint.Id">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge @(cpItem.IsPassed ? "bg-success" : "bg-warning text-white") rounded-pill shadow-xs">
+                                                <i class="bi bi-clock me-1"></i>@timeFormatted
+                                            </span>
+                                            <span class="fw-bold small text-truncate text-dark" style="max-width: 135px;" title="@cpItem.Checkpoint.Title">@cpItem.Checkpoint.Title</span>
+                                        </div>
+                                        <span id="cp-status-@cpItem.Checkpoint.Id">
+                                            @if (cpItem.IsPassed)
+                                            {
+                                                <i class="bi bi-patch-check-fill text-success fs-5" title="Passed"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-lock-fill text-warning fs-5" title="Locked until timestamp"></i>
+                                            }
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted d-flex justify-content-between align-items-center">
+                                        <span><i class="bi bi-card-text me-1"></i>@cpItem.Questions.Count Question(s)</span>
+                                        <span class="fw-medium">@cpItem.Checkpoint.PassingScorePercent% pass</span>
+                                    </div>
+                                    @if (cpItem.IsPassed)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-warning w-100 mt-2 fw-semibold rounded-pill retake-btn" data-checkpoint-id="@cpItem.Checkpoint.Id" onclick="retakeQuiz(@cpItem.Checkpoint.Id)">
+                                            <i class="bi bi-arrow-clockwise me-1"></i> Retake Quiz
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Learning Tips Card -->
+            <div class="card border-0 shadow-sm rounded-4" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0 !important;">
+                <div class="card-body p-3 small text-muted">
+                    <strong class="d-block text-dark mb-1"><i class="bi bi-shield-check text-success me-1"></i> Anti-Skip Policy Active</strong>
+                    Forward skipping is secured until mandatory checkpoints are passed. You can review passed quizzes anytime to refresh your knowledge.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Embedded checkpoint data serialized from server
+    const checkpointsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Checkpoints.Select(c => new {
+        id = c.Checkpoint.Id,
+        title = c.Checkpoint.Title,
+        timestampSeconds = c.Checkpoint.TimestampSeconds,
+        passingScorePercent = c.Checkpoint.PassingScorePercent,
+        isPassed = c.IsPassed,
+        questions = c.Questions.Select(q => new {
+            id = q.Id,
+            questionText = q.QuestionText,
+            points = q.Points,
+            options = q.AnswerOptions.Select(o => new {
+                id = o.Id,
+                optionText = o.OptionText
+            }).ToList()
+        }).ToList()
+    })));
+
+    const assignmentId = @Model.Assignment.Id;
+    const videoId = @Model.Video.Id;
+    const serverDuration = @Model.Video.DurationSeconds;
+    let initialPosition = @initialPosition;
+    let isVideoCompleted = @(isVideoCompleted.ToString().ToLower());
+
+    const videoEl = document.getElementById('lmsVideo');
+    const checkpointOverlay = document.getElementById('checkpointOverlay');
+    const completionOverlay = document.getElementById('completionOverlay');
+    const reviewBanner = document.getElementById('reviewBanner');
+    const reviewCpTitle = document.getElementById('reviewCpTitle');
+    const btnRewatchSegment = document.getElementById('btnRewatchSegment');
+    const btnReturnToQuiz = document.getElementById('btnReturnToQuiz');
+    const quizBody = document.getElementById('quizBody');
+    const quizFeedback = document.getElementById('quizFeedback');
+    const btnSubmitQuiz = document.getElementById('btnSubmitQuiz');
+
+    let maxAllowedTime = initialPosition;
+    let activeCheckpoint = null;
+    let isReviewingCheckpoint = false;
+    let lastValidTime = initialPosition;
+    let lastSavedPosition = initialPosition;
+    let saveInterval = null;
+
+    // Helper to calculate the upper seeking boundary
+    function getUpperSeekLimit() {
+        if (isVideoCompleted) {
+            return videoEl.duration || 999999;
+        }
+        if (activeCheckpoint) {
+            return activeCheckpoint.timestampSeconds;
+        }
+        const nextUnpassed = checkpointsData.find(c => !c.isPassed);
+        if (nextUnpassed) {
+            return Math.min(maxAllowedTime + 1, nextUnpassed.timestampSeconds);
+        }
+        return maxAllowedTime + 1;
+    }
+
+    // Restore playback position on loadedmetadata
+    videoEl.addEventListener('loadedmetadata', function () {
+        if (isVideoCompleted) {
+            maxAllowedTime = videoEl.duration || 999999;
+            // If already completed and user opened page to rewatch from the end, reset to 0
+            if (initialPosition >= Math.floor(videoEl.duration || 999999) - 2) {
+                initialPosition = 0;
+                videoEl.currentTime = 0;
+                lastValidTime = 0;
+                return;
+            }
+        }
+
+        if (initialPosition > 0 && initialPosition < (videoEl.duration || 999999)) {
+            videoEl.currentTime = initialPosition;
+            lastValidTime = initialPosition;
+        }
+
+        // If server duration is 0, save the accurate duration immediately
+        if (serverDuration === 0 && videoEl.duration > 0 && isFinite(videoEl.duration)) {
+            saveProgress(false);
+        }
+    });
+
+    // Strictly enforce normal playback speed - block fast-forward speed tricks
+    videoEl.addEventListener('ratechange', function () {
+        if (videoEl.playbackRate > 1.0) {
+            videoEl.playbackRate = 1.0;
+        }
+    });
+
+    // Anti-skipping protection on user seek attempts
+    videoEl.addEventListener('seeking', function () {
+        const upperLimit = getUpperSeekLimit();
+        if (videoEl.currentTime > upperLimit) {
+            videoEl.currentTime = Math.min(lastValidTime, upperLimit);
+        } else {
+            lastValidTime = videoEl.currentTime;
+        }
+    });
+
+    // Block keyboard forward-seeking past upperLimit
+    videoEl.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight' || e.key === 'l' || e.key === 'L') {
+            const upperLimit = getUpperSeekLimit();
+            if (videoEl.currentTime + 2 > upperLimit) {
+                e.preventDefault();
+                videoEl.currentTime = upperLimit;
+            }
+        }
+    });
+
+    // Playback loop protection & checkpoint trigger
+    videoEl.addEventListener('timeupdate', function () {
+        const current = videoEl.currentTime;
+        const upperLimit = getUpperSeekLimit();
+
+        // Enforce seek limit during playback (prevents skipping via timeline dragging)
+        if (current > upperLimit + 0.6) {
+            videoEl.currentTime = Math.min(lastValidTime, upperLimit);
+            return;
+        }
+
+        // If user is currently reviewing the video for an active checkpoint and reached checkpoint time
+        if (isReviewingCheckpoint && activeCheckpoint) {
+            if (current >= activeCheckpoint.timestampSeconds) {
+                videoEl.pause();
+                videoEl.currentTime = activeCheckpoint.timestampSeconds;
+                isReviewingCheckpoint = false;
+                if (reviewBanner) reviewBanner.style.display = 'none';
+                checkpointOverlay.style.display = 'flex';
+                return;
+            }
+        }
+
+        // Update maximum legitimately watched position if not completed
+        if (!isVideoCompleted) {
+            if (current > maxAllowedTime) {
+                const nextUnpassed = checkpointsData.find(c => !c.isPassed);
+                if (!nextUnpassed || current <= nextUnpassed.timestampSeconds) {
+                    maxAllowedTime = Math.floor(current);
+                }
+            }
+        }
+
+        lastValidTime = current;
+
+        // Check if employee reached an unpassed checkpoint during normal playback
+        if (!isReviewingCheckpoint) {
+            const currentTimeFloor = Math.floor(current);
+            for (let i = 0; i < checkpointsData.length; i++) {
+                const cp = checkpointsData[i];
+                if (!cp.isPassed && currentTimeFloor >= cp.timestampSeconds) {
+                    triggerCheckpoint(cp);
+                    return;
+                }
+            }
+        }
+    });
+
+    // Handle checkpoint trigger
+    function triggerCheckpoint(cp) {
+        if (activeCheckpoint && activeCheckpoint.id === cp.id && cp.isPassed) return;
+
+        videoEl.pause();
+        activeCheckpoint = cp;
+        videoEl.currentTime = cp.timestampSeconds;
+        lastValidTime = cp.timestampSeconds;
+        isReviewingCheckpoint = false;
+        if (reviewBanner) reviewBanner.style.display = 'none';
+
+        document.getElementById('overlayCpTitle').textContent = cp.title;
+        document.getElementById('overlayCpMeta').textContent = `Required score: ${cp.passingScorePercent}%`;
+        document.getElementById('overlayPassingBadge').textContent = `${cp.passingScorePercent}% Required`;
+        quizFeedback.textContent = '';
+        btnSubmitQuiz.disabled = false;
+        btnSubmitQuiz.style.display = '';
+
+        // Remove any leftover retry buttons from a previous failed attempt
+        const oldRetryBtn = quizFeedback.parentElement?.querySelector('.btn-outline-danger');
+        if (oldRetryBtn) oldRetryBtn.remove();
+
+        // Render questions
+        let html = '';
+        if (cp.questions && cp.questions.length > 0) {
+            cp.questions.forEach((q, qIndex) => {
+                html += `
+                    <div class="card mb-3 question-card" id="q-card-${q.id}">
+                        <div class="card-body p-3 p-md-4">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <span class="badge bg-primary-subtle text-primary fw-bold rounded-pill px-3 py-1">Question ${qIndex + 1}</span>
+                                <span class="small text-muted fw-semibold">${q.points} pt(s)</span>
+                            </div>
+                            <h6 class="fw-bold mb-3 text-dark fs-6">${escapeHtml(q.questionText)}</h6>
+                            <div class="options-container">
+                `;
+
+                q.options.forEach((opt, optIndex) => {
+                    const letter = String.fromCharCode(65 + optIndex);
+                    html += `
+                        <label class="d-flex align-items-center option-row" id="opt-row-${opt.id}" for="opt_${opt.id}">
+                            <input class="form-check-input mt-0 me-3 flex-shrink-0" type="radio" name="question_${q.id}" id="opt_${opt.id}" value="${opt.id}">
+                            <span class="option-letter">${letter}</span>
+                            <span class="w-100 fw-medium mb-0 text-dark">
+                                ${escapeHtml(opt.optionText)}
+                            </span>
+                        </label>
+                    `;
+                });
+
+                html += `
+                            </div>
+                            <div class="question-result small mt-2 d-none"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            html = '<div class="text-center py-4 text-muted"><i class="bi bi-info-circle fs-3 d-block mb-2"></i>No questions configured for this checkpoint.</div>';
+        }
+
+        quizBody.innerHTML = html;
+        if (completionOverlay) completionOverlay.style.display = 'none';
+        checkpointOverlay.style.display = 'flex';
+    }
+
+    // Rewatch Segment button handler (allow employee to review video before answering)
+    btnRewatchSegment?.addEventListener('click', function () {
+        if (!activeCheckpoint) return;
+
+        // Calculate rewind position: start of this section (previous checkpoint or 45s earlier)
+        const prevCps = checkpointsData.filter(c => c.timestampSeconds < activeCheckpoint.timestampSeconds);
+        let rewindTo = 0;
+        if (prevCps.length > 0) {
+            rewindTo = prevCps[prevCps.length - 1].timestampSeconds;
+        } else {
+            rewindTo = Math.max(0, activeCheckpoint.timestampSeconds - 45);
+        }
+
+        checkpointOverlay.style.display = 'none';
+        if (reviewCpTitle) reviewCpTitle.textContent = activeCheckpoint.title;
+        if (reviewBanner) reviewBanner.style.display = 'flex';
+        isReviewingCheckpoint = true;
+
+        videoEl.currentTime = rewindTo;
+        lastValidTime = rewindTo;
+        videoEl.play();
+    });
+
+    // Return to Quiz button from review banner
+    btnReturnToQuiz?.addEventListener('click', function () {
+        videoEl.pause();
+        isReviewingCheckpoint = false;
+        if (reviewBanner) reviewBanner.style.display = 'none';
+        checkpointOverlay.style.display = 'flex';
+    });
+
+    // Handle option selection styling and clear validation warnings
+    quizBody.addEventListener('change', function (e) {
+        if (e.target && e.target.type === 'radio') {
+            const questionName = e.target.name;
+            document.querySelectorAll(`input[name="${questionName}"]`).forEach(input => {
+                const row = input.closest('.option-row');
+                if (row) {
+                    row.classList.remove('border-primary', 'bg-primary-subtle');
+                }
+            });
+            const selectedRow = e.target.closest('.option-row');
+            if (selectedRow) {
+                selectedRow.classList.add('border-primary', 'bg-primary-subtle');
+            }
+            const qCard = e.target.closest('.question-card');
+            if (qCard) {
+                qCard.classList.remove('border-danger', 'border-2');
+            }
+            quizFeedback.innerHTML = '';
+        }
+    });
+
+    // Submit Quiz Answers via AJAX
+    btnSubmitQuiz.addEventListener('click', async function () {
+        if (!activeCheckpoint) return;
+
+        const answers = [];
+        const unansweredQuestionIds = [];
+
+        activeCheckpoint.questions.forEach(q => {
+            const selected = document.querySelector(`input[name="question_${q.id}"]:checked`);
+            if (selected) {
+                answers.push({ questionId: q.id, selectedOptionId: parseInt(selected.value) });
+            } else {
+                unansweredQuestionIds.push(q.id);
+            }
+        });
+
+        if (unansweredQuestionIds.length > 0) {
+            unansweredQuestionIds.forEach(qid => {
+                const card = document.getElementById(`q-card-${qid}`);
+                if (card) {
+                    card.classList.add('border-danger', 'border-2');
+                }
+            });
+            quizFeedback.innerHTML = '<span class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i> Please select the option to submit an answer.</span>';
+            return;
+        }
+
+        btnSubmitQuiz.disabled = true;
+        quizFeedback.innerHTML = '<span class="text-muted"><i class="bi bi-hourglass-split me-1"></i> Grading quiz...</span>';
+
+        try {
+            const response = await fetch('/Player/SubmitQuiz', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    checkpointId: activeCheckpoint.id,
+                    assignmentId: assignmentId,
+                    answers: answers
+                })
+            });
+
+            if (!response.ok) throw new Error('Submission failed');
+
+            const result = await response.json();
+
+            // Highlight results per question
+            result.answerResults.forEach(ar => {
+                const card = document.getElementById(`q-card-${ar.questionId}`);
+                const optRow = document.getElementById(`opt-row-${ar.correctOptionId}`);
+                if (card) {
+                    if (ar.isCorrect) {
+                        card.classList.add('border-success', 'bg-success-subtle');
+                    } else {
+                        card.classList.add('border-danger', 'bg-danger-subtle');
+                    }
+                }
+                if (optRow) {
+                    optRow.classList.add('border-success', 'bg-success', 'text-white');
+                }
+            });
+
+            if (result.passed) {
+                activeCheckpoint.isPassed = true;
+                quizFeedback.innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Passed! Score: ${result.scorePercent}% (${result.score}/${result.maxScore}). Resuming video...</span>`;
+
+                // Update sidebar UI
+                const sidebarItem = document.getElementById(`cp-item-${activeCheckpoint.id}`);
+                const sidebarStatus = document.getElementById(`cp-status-${activeCheckpoint.id}`);
+                if (sidebarItem) sidebarItem.classList.add('bg-success-subtle', 'text-success');
+                if (sidebarStatus) sidebarStatus.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5"></i>';
+
+                setTimeout(() => {
+                    checkpointOverlay.style.display = 'none';
+                    activeCheckpoint = null;
+                    videoEl.play();
+                }, 1800);
+            } else {
+                quizFeedback.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i> Scored ${result.scorePercent}%. Required: ${result.requiredPercent}%.</span>`;
+                btnSubmitQuiz.disabled = true;
+                btnSubmitQuiz.style.display = 'none';
+
+                // Show a Try Again button so the user can reattempt immediately
+                const retryBtn = document.createElement('button');
+                retryBtn.type = 'button';
+                retryBtn.className = 'btn btn-outline-danger fw-bold px-4 shadow-sm ms-2';
+                retryBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Try Again';
+                retryBtn.addEventListener('click', () => {
+                    triggerCheckpoint(activeCheckpoint);
+                });
+                quizFeedback.parentElement.appendChild(retryBtn);
+            }
+        } catch (err) {
+            quizFeedback.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> An error occurred submitting your answers.</span>';
+            btnSubmitQuiz.disabled = false;
+        }
+    });
+
+    // Periodic Progress Saving
+    async function saveProgress(isCompleted = false) {
+        const currentPos = Math.floor(videoEl.currentTime || 0);
+        const durationSecs = Math.floor(videoEl.duration || serverDuration || 0);
+        if (Math.abs(currentPos - lastSavedPosition) < 2 && !isCompleted) return;
+
+        lastSavedPosition = currentPos;
+
+        try {
+            const res = await fetch('/Player/SaveProgress', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    assignmentId: assignmentId,
+                    videoId: videoId,
+                    positionSeconds: currentPos,
+                    durationSeconds: durationSecs > 0 ? durationSecs : 0,
+                    isCompleted: isCompleted || isVideoCompleted
+                }),
+                keepalive: true
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.videoCompleted) {
+                    isVideoCompleted = true;
+                    const badge = document.getElementById('moduleCompletedBadge');
+                    if (badge) badge.classList.remove('d-none');
+                    const finishBtn = document.getElementById('btnFinishModule');
+                    if (finishBtn) finishBtn.classList.add('d-none');
+                }
+            }
+        } catch (err) {
+            console.error('Failed to save progress', err);
+        }
+    }
+
+    // Save every 8 seconds during playback
+    saveInterval = setInterval(() => {
+        if (!videoEl.paused) {
+            saveProgress(false);
+        }
+    }, 8000);
+
+    // Complete Module handler
+    async function completeModule() {
+        const allPassed = checkpointsData.every(c => c.isPassed);
+        if (!allPassed) {
+            alert('Please complete all mandatory quiz checkpoints to finalize this module.');
+            return;
+        }
+
+        if (reviewBanner) reviewBanner.style.display = 'none';
+        await saveProgress(true);
+        isVideoCompleted = true;
+        completionOverlay.style.display = 'flex';
+        const badge = document.getElementById('moduleCompletedBadge');
+        if (badge) badge.classList.remove('d-none');
+        const finishBtn = document.getElementById('btnFinishModule');
+        if (finishBtn) finishBtn.classList.add('d-none');
+    }
+
+    document.getElementById('btnFinishModule')?.addEventListener('click', completeModule);
+
+    // Video Ended handler
+    videoEl.addEventListener('ended', function () {
+        completeModule();
+    });
+
+    // Auto complete near end of video (within 0.8s of end)
+    videoEl.addEventListener('timeupdate', function () {
+        if (videoEl.duration > 0 && (videoEl.duration - videoEl.currentTime) < 0.8 && !isVideoCompleted) {
+            const allPassed = checkpointsData.every(c => c.isPassed);
+            if (allPassed) {
+                completeModule();
+            }
+        }
+    });
+
+    // Helper: escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        const p = document.createElement('p');
+        p.textContent = text;
+        return p.innerHTML;
+    }
+
+    // ── RETAKE QUIZ ────────────────────────────────────────────────────
+    async function retakeQuiz(checkpointId) {
+        if (!confirm('Are you sure you want to retake this quiz? Your previous score will be cleared.')) return;
+
+        const cp = checkpointsData.find(c => c.id === checkpointId);
+        if (!cp) return;
+
+        const retakeBtn = document.querySelector(`button[data-checkpoint-id="${checkpointId}"]`);
+        if (retakeBtn) {
+            retakeBtn.disabled = true;
+            retakeBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Resetting...';
+        }
+
+        try {
+            const response = await fetch('/Player/RetakeQuiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ checkpointId: checkpointId, assignmentId: assignmentId })
+            });
+
+            if (!response.ok) throw new Error('Retake request failed');
+
+            // Reset client-side checkpoint state
+            cp.isPassed = false;
+            activeCheckpoint = null;
+            isReviewingCheckpoint = false;
+            if (reviewBanner) reviewBanner.style.display = 'none';
+
+            // Reset video completion state
+            isVideoCompleted = false;
+            const badge = document.getElementById('moduleCompletedBadge');
+            if (badge) badge.classList.add('d-none');
+            const finishBtn = document.getElementById('btnFinishModule');
+            if (finishBtn) finishBtn.classList.remove('d-none');
+            completionOverlay.style.display = 'none';
+
+            // Update sidebar UI — remove passed styling
+            const sidebarItem = document.getElementById(`cp-item-${checkpointId}`);
+            const sidebarStatus = document.getElementById(`cp-status-${checkpointId}`);
+            if (sidebarItem) sidebarItem.classList.remove('bg-success-subtle', 'text-success');
+            if (sidebarStatus) sidebarStatus.innerHTML = '<i class="bi bi-lock-fill text-warning fs-5" title="Locked until timestamp"></i>';
+
+            // Remove the retake button itself
+            if (retakeBtn) retakeBtn.remove();
+
+            // If the video is currently past the checkpoint, immediately trigger the quiz overlay
+            if (Math.floor(videoEl.currentTime) >= cp.timestampSeconds) {
+                activeCheckpoint = null; // clear so triggerCheckpoint doesn't guard
+                triggerCheckpoint(cp);
+            }
+        } catch (err) {
+            console.error('Retake failed:', err);
+            alert('Failed to reset quiz. Please try again.');
+            if (retakeBtn) {
+                retakeBtn.disabled = false;
+                retakeBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Retake Quiz';
+            }
+        }
+    }
+</script>
+}

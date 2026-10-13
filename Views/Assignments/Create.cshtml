@@ -1,0 +1,100 @@
+@model VoyageFreightLMS.Models.ViewModels.AssignCourseViewModel
+@{
+    ViewData["Title"] = "Assign Course to Employees";
+    var courses = ViewBag.Courses as List<VoyageFreightLMS.Models.Course> ?? new();
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary mb-2">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Assignments
+                </a>
+                <h4 class="fw-bold mb-0">
+                    <i class="bi bi-person-plus-fill text-primary me-2"></i>Assign Course to Employees
+                </h4>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4 p-md-5">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+                    <!-- Course Selection -->
+                    <div class="mb-4">
+                        <label asp-for="CourseId" class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
+                        <select asp-for="CourseId" class="form-select select2">
+                            <option value="0">-- Choose a Training Course --</option>
+                            @foreach (var c in courses)
+                            {
+                                <option value="@c.Id" selected="@(Model.CourseId == c.Id)">@c.Title (@c.Category ?? "General")</option>
+                            }
+                        </select>
+                        <span asp-validation-for="CourseId" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Due Date -->
+                    <div class="mb-4">
+                        <label asp-for="DueDate" class="form-label fw-semibold">Completion Deadline (Optional)</label>
+                        <input asp-for="DueDate" type="date" class="form-control" />
+                        <div class="form-text small">Employees will be alerted if the course remains incomplete by this date.</div>
+                    </div>
+
+                    <!-- Employee Multi-Selection -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="form-label fw-semibold mb-0">Select Employees <span class="text-danger">*</span></label>
+                            <div class="form-check form-check-inline mb-0 small">
+                                <input class="form-check-input" type="checkbox" id="selectAllEmployees">
+                                <label class="form-check-label text-muted" for="selectAllEmployees">Select All</label>
+                            </div>
+                        </div>
+
+                        <div class="border rounded-3 p-3 bg-light overflow-auto" style="max-height: 280px;">
+                            @if (!Model.AvailableEmployees.Any())
+                            {
+                                <div class="text-muted small text-center py-3">
+                                    No employees found in the system. Create Employee accounts under Admin &gt; Add User.
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var emp in Model.AvailableEmployees)
+                                {
+                                    <div class="form-check p-2 mb-1 bg-white rounded border">
+                                        <input class="form-check-input emp-checkbox ms-1 me-2" type="checkbox" name="SelectedEmployeeIds" value="@emp.Id" id="emp_@emp.Id" @(Model.SelectedEmployeeIds.Contains(emp.Id) ? "checked" : "")>
+                                        <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="emp_@emp.Id">
+                                            <span class="fw-semibold">@emp.FullName</span>
+                                            <span class="badge bg-light text-muted border small">@(emp.Department ?? "Voyage Freight")</span>
+                                        </label>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        <span asp-validation-for="SelectedEmployeeIds" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-light px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                            <i class="bi bi-send-fill me-1"></i> Confirm & Enroll
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('selectAllEmployees')?.addEventListener('change', function () {
+            const checked = this.checked;
+            document.querySelectorAll('.emp-checkbox').forEach(cb => cb.checked = checked);
+        });
+    </script>
+}

@@ -1,0 +1,71 @@
+@model List<VoyageFreightLMS.Models.ApplicationUser>
+@{
+    ViewData["Title"] = "All Users";
+    var userRoles = ViewBag.UserRoles as Dictionary<string, IList<string>>;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>All Users</h4>
+    <a asp-action="Register" class="btn btn-primary">
+        <i class="bi bi-person-plus me-2"></i>Add User
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Job Title</th>
+                        <th>Role(s)</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td class="ps-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle bg-primary text-white me-2">
+                                        <span>@user.FirstName[0]</span>
+                                    </div>
+                                    <span class="fw-semibold">@user.FullName</span>
+                                </div>
+                            </td>
+                            <td>@user.Email</td>
+                            <td>@(user.Department ?? "—")</td>
+                            <td>@(user.JobTitle ?? "—")</td>
+                            <td>
+                                @if (userRoles != null && userRoles.ContainsKey(user.Id))
+                                {
+                                    @foreach (var role in userRoles[user.Id])
+                                    {
+                                        var badgeClass = role switch
+                                        {
+                                            "Admin" => "bg-danger",
+                                            "Trainer" => "bg-info",
+                                            "HR" => "bg-warning text-dark",
+                                            "Manager" => "bg-success",
+                                            _ => "bg-secondary"
+                                        };
+                                        <span class="badge @badgeClass me-1">@role</span>
+                                    }
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary" title="Edit user details and role">
+                                    <i class="bi bi-pencil-square me-1"></i> Edit
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
