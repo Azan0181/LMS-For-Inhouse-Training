@@ -259,3 +259,11 @@ D:\LMS\VoyageFreightLMS\obj\Debug\net10.0\compressed\j9xen77wn2-{0}-414l44zk5p-4
 D:\LMS\VoyageFreightLMS\obj\Debug\net10.0\compressed\npallsplri-{0}-u15hyixt1r-u15hyixt1r.gz
 D:\LMS\VoyageFreightLMS\obj\Debug\net10.0\compressed\2pr5o74kdx-{0}-g6hmm1m2ah-g6hmm1m2ah.gz
 D:\LMS\VoyageFreightLMS\obj\Debug\net10.0\compressed\tmgcpta0it-{0}-jtzcilwxy1-jtzcilwxy1.gz
+D:\LMS\VoyageFreightLMS\bin\Debug\net10.0\publish\web.config
+D:\LMS\VoyageFreightLMS\bin\Debug\net10.0\dotnet-tools.json
+D:\LMS\VoyageFreightLMS\bin\Debug\net10.0\publish\appsettings.Development.json
+D:\LMS\VoyageFreightLMS\bin\Debug\net10.0\publish\appsettings.json
+D:\LMS\VoyageFreightLMS\bin\Debug\net10.0\publish\VoyageFreightLMS.deps.json
+D:\LMS\VoyageFreightLMS\bin\Debug\net10.0\publish\VoyageFreightLMS.runtimeconfig.json
+D:\LMS\VoyageFreightLMS\bin\Debug\net10.0\publish\VoyageFreightLMS.staticwebassets.endpoints.json
+D:\LMS\VoyageFreightLMS\bin\Debug\net10.0\publish\dotnet-tools.json
