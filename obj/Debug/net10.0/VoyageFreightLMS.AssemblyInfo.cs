@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VoyageFreightLMS")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9958bbca07dff0d58e3ca3e89cef3dd9ccdd37ef")]
 [assembly: System.Reflection.AssemblyProductAttribute("VoyageFreightLMS")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VoyageFreightLMS")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -105,21 +105,22 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
 }
 
 .brand-logo-badge {
-    background: #ffffff;
-    padding: 6px 12px;
-    border-radius: 9px;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    box-shadow: none;
 }
 
 .sidebar-logo-img {
-    height: 22px;
+    height: 24px;
     width: auto;
-    max-width: 105px;
+    max-width: 110px;
     object-fit: contain;
     display: block;
+    filter: brightness(0) invert(1);
 }
 
 .brand-title {
@@ -493,7 +494,16 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
 }
 
+.option-row input[type="radio"] {
+    cursor: pointer !important;
+}
+
+.option-row label {
+    cursor: pointer !important;
+}
+
 .option-row.border-primary,
+.option-row.selected-option,
 .option-row:has(input:checked) {
     background-color: #eef2ff !important;
     border-color: var(--primary) !important;
@@ -512,11 +522,14 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     font-size: 0.8rem;
     font-weight: 700;
     margin-right: 0.65rem;
+    pointer-events: none;
 }
 
-.option-row:has(input:checked) .option-letter {
-    background: var(--primary);
-    color: #ffffff;
+.option-row:has(input:checked) .option-letter,
+.option-row.selected-option .option-letter,
+.option-row.border-primary .option-letter {
+    background: var(--primary) !important;
+    color: #ffffff !important;
 }
 
 /* Quiz Footer */
@@ -667,80 +680,189 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
 }
 
 /* Glassmorphism Card */
-.glass-login-card {
+/* ── EXECUTIVE SPLIT PORTAL LOGIN ─────────────────────────── */
+.portal-card {
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 440px;
-    background: rgba(15, 23, 42, 0.65);
+    max-width: 980px;
+    background: rgba(15, 23, 42, 0.72);
     backdrop-filter: blur(28px) saturate(190%);
     -webkit-backdrop-filter: blur(28px) saturate(190%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 
-        0 25px 65px -15px rgba(0, 0, 0, 0.75),
+        0 35px 85px -20px rgba(0, 0, 0, 0.85),
         0 0 0 1px rgba(255, 255, 255, 0.06),
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.28);
-    border-radius: 28px;
-    padding: 2.75rem 2.25rem 2.25rem;
-    color: #ffffff;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+    border-radius: 26px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
 }
 
-/* Subtle top edge specular reflection */
-.glass-login-card::before {
+/* Subtle top edge specular highlight */
+.portal-card::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 15%;
-    right: 15%;
+    left: 10%;
+    right: 10%;
     height: 1.5px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    z-index: 2;
 }
 
-/* Brand & Logo Header */
-.auth-brand-wrapper {
+/* Left: Hero Showcase Column */
+.portal-hero-col {
+    flex: 1.1;
+    background: linear-gradient(155deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
+    padding: 3.25rem 2.75rem;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin-bottom: 2rem;
+    justify-content: space-between;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
 }
 
+.portal-hero-col::after {
+    content: '';
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    bottom: -80px;
+    right: -80px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+/* Pure Floating Logo (No white background!) */
 .auth-logo-badge {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    background: #ffffff;
-    padding: 14px 34px;
-    border-radius: 18px;
-    box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.2);
-    margin-bottom: 1.35rem;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.auth-logo-badge:hover {
-    transform: translateY(-2px) scale(1.02);
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin-bottom: 1.75rem;
 }
 
 .auth-logo-img {
-    height: 48px;
+    height: 40px;
     width: auto;
-    max-width: 220px;
+    max-width: 190px;
     object-fit: contain;
     display: block;
+    filter: brightness(0) invert(1) drop-shadow(0 4px 14px rgba(255, 255, 255, 0.2));
 }
 
-.auth-heading {
-    color: #ffffff;
-    font-size: 1.65rem;
+.portal-tagline {
+    font-size: 0.72rem;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #818cf8;
+    background: rgba(99, 102, 241, 0.14);
+    border: 1px solid rgba(99, 102, 241, 0.28);
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: fit-content;
+    margin-bottom: 1.25rem;
+}
+
+.portal-hero-title {
+    color: #ffffff;
+    font-size: 1.85rem;
+    font-weight: 800;
+    line-height: 1.25;
     letter-spacing: -0.025em;
+    margin-bottom: 1rem;
+}
+
+.portal-hero-desc {
+    color: #94a3b8;
+    font-size: 0.925rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.portal-features-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.portal-feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.portal-feature-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(99, 102, 241, 0.18);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: #a5b4fc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.portal-feature-text {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+}
+
+.portal-feature-text strong {
+    color: #ffffff;
+    display: block;
+    font-size: 0.88rem;
+}
+
+.portal-hero-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: #64748b;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 1.25rem;
+}
+
+/* Right: Sign-in Form Column */
+.portal-form-col {
+    flex: 1;
+    padding: 3.25rem 2.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.portal-form-header {
+    margin-bottom: 2rem;
+}
+
+.portal-form-title {
+    color: #ffffff;
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     margin: 0;
 }
 
-.auth-subheading {
+.portal-form-subtitle {
     color: #94a3b8;
-    font-size: 0.885rem;
+    font-size: 0.85rem;
     margin-top: 0.35rem;
     margin-bottom: 0;
 }
@@ -753,9 +875,9 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
 .glass-field-label {
     display: block;
     color: #cbd5e1;
-    font-size: 0.825rem;
+    font-size: 0.82rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.45rem;
     letter-spacing: 0.01em;
 }
 
@@ -764,20 +886,20 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     align-items: center;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+    border-radius: 12px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     padding: 0 0.85rem;
 }
 
 .glass-input-wrapper:focus-within {
-    background: rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.08);
     border-color: #818cf8;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28), 0 4px 14px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28), 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .glass-input-icon {
     color: #94a3b8;
-    font-size: 1.05rem;
+    font-size: 1rem;
     margin-right: 0.65rem;
     display: flex;
     align-items: center;
@@ -791,13 +913,13 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     outline: none !important;
     box-shadow: none !important;
     color: #ffffff !important;
-    font-size: 0.935rem;
-    padding: 0.825rem 0;
+    font-size: 0.92rem;
+    padding: 0.8rem 0;
     font-family: inherit;
 }
 
 .glass-form-control::placeholder {
-    color: rgba(148, 163, 184, 0.55);
+    color: rgba(148, 163, 184, 0.5);
 }
 
 .glass-pw-toggle {
@@ -823,20 +945,20 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.4rem;
 }
 
 .glass-checkbox {
-    width: 17px;
-    height: 17px;
-    border-radius: 5px;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
     accent-color: #6366f1;
     cursor: pointer;
 }
 
 .glass-check-label {
     color: #94a3b8;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     cursor: pointer;
     user-select: none;
     transition: color 0.15s ease;
@@ -857,26 +979,24 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
     background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #4f46e5 100%);
     background-size: 200% auto;
     border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 14px;
+    border-radius: 12px;
     color: #ffffff;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 600;
     letter-spacing: 0.015em;
     cursor: pointer;
-    box-shadow: 0 8px 25px -4px rgba(79, 70, 229, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-glass-submit:hover {
     background-position: right center;
     transform: translateY(-2px);
-    box-shadow: 0 12px 30px -4px rgba(79, 70, 229, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    box-shadow: 0 12px 28px -4px rgba(79, 70, 229, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45);
     color: #ffffff;
 }
 
-.btn-glass-submit:active {
-    transform: translateY(0);
-}
+
 
 /* Glass Validation Alert */
 .glass-validation-summary {
@@ -896,8 +1016,22 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
 
 .auth-footer {
     text-align: center;
-    margin-top: 1.75rem;
+    margin-top: 1.25rem;
     color: #64748b;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     letter-spacing: 0.01em;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .portal-card {
+        flex-direction: column;
+        max-width: 480px;
+    }
+    .portal-hero-col {
+        display: none;
+    }
+    .portal-form-col {
+        padding: 2.5rem 1.75rem;
+    }
 }

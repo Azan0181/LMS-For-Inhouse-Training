@@ -169,7 +169,7 @@
                                 var seconds = cpItem.Checkpoint.TimestampSeconds % 60;
                                 var timeFormatted = $"{minutes:D2}:{seconds:D2}";
 
-                                <div class="list-group-item p-3 rounded-3 mb-2 checkpoint-sidebar-item @(cpItem.IsPassed ? "bg-success-subtle border-success-subtle" : "border")" id="cp-item-@cpItem.Checkpoint.Id">
+                                <div class="list-group-item p-3 rounded-3 mb-2 checkpoint-sidebar-item @(cpItem.IsPassed ? "bg-success-subtle border-success-subtle" : "border")" id="cp-item-@cpItem.Checkpoint.Id" style="cursor: pointer;" onclick="openCheckpointFromSidebar(@cpItem.Checkpoint.Id)" title="Click to view checkpoint quiz">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="badge @(cpItem.IsPassed ? "bg-success" : "bg-warning text-white") rounded-pill shadow-xs">
@@ -194,7 +194,7 @@
                                     </div>
                                     @if (cpItem.IsPassed)
                                     {
-                                        <button type="button" class="btn btn-sm btn-outline-warning w-100 mt-2 fw-semibold rounded-pill retake-btn" data-checkpoint-id="@cpItem.Checkpoint.Id" onclick="retakeQuiz(@cpItem.Checkpoint.Id)">
+                                        <button type="button" class="btn btn-sm btn-outline-warning w-100 mt-2 fw-semibold rounded-pill retake-btn" data-checkpoint-id="@cpItem.Checkpoint.Id" onclick="event.stopPropagation(); retakeQuiz(@cpItem.Checkpoint.Id)">
                                             <i class="bi bi-arrow-clockwise me-1"></i> Retake Quiz
                                         </button>
                                     }
@@ -345,7 +345,7 @@
                 videoEl.currentTime = activeCheckpoint.timestampSeconds;
                 isReviewingCheckpoint = false;
                 if (reviewBanner) reviewBanner.style.display = 'none';
-                checkpointOverlay.style.display = 'flex';
+                triggerCheckpoint(activeCheckpoint, true);
                 return;
             }
         }
@@ -363,7 +363,7 @@
         lastValidTime = current;
 
         // Check if employee reached an unpassed checkpoint during normal playback
-        if (!isReviewingCheckpoint) {
+        if (!isReviewingCheckpoint && !activeCheckpoint) {
             const currentTimeFloor = Math.floor(current);
             for (let i = 0; i < checkpointsData.length; i++) {
                 const cp = checkpointsData[i];
@@ -376,8 +376,13 @@
     });
 
     // Handle checkpoint trigger
-    function triggerCheckpoint(cp) {
-        if (activeCheckpoint && activeCheckpoint.id === cp.id && cp.isPassed) return;
+    function triggerCheckpoint(cp, forceRerender = false) {
+        if (!cp) return;
+
+        // Prevent wiping out quiz questions while the user is actively answering
+        if (!forceRerender && activeCheckpoint && activeCheckpoint.id === cp.id && checkpointOverlay.style.display === 'flex' && quizBody.children.length > 0) {
+            return;
+        }
 
         videoEl.pause();
         activeCheckpoint = cp;
@@ -415,13 +420,15 @@
                 q.options.forEach((opt, optIndex) => {
                     const letter = String.fromCharCode(65 + optIndex);
                     html += `
-                        <label class="d-flex align-items-center option-row" id="opt-row-${opt.id}" for="opt_${opt.id}">
+                        <div class="d-flex align-items-center option-row" id="opt-row-${opt.id}" data-opt-id="${opt.id}">
                             <input class="form-check-input mt-0 me-3 flex-shrink-0" type="radio" name="question_${q.id}" id="opt_${opt.id}" value="${opt.id}">
-                            <span class="option-letter">${letter}</span>
-                            <span class="w-100 fw-medium mb-0 text-dark">
-                                ${escapeHtml(opt.optionText)}
-                            </span>
-                        </label>
+                            <label class="d-flex align-items-center w-100 mb-0 user-select-none" for="opt_${opt.id}">
+                                <span class="option-letter">${letter}</span>
+                                <span class="w-100 fw-medium mb-0 text-dark">
+                                    ${escapeHtml(opt.optionText)}
+                                </span>
+                            </label>
+                        </div>
                     `;
                 });
 
@@ -469,7 +476,25 @@
         videoEl.pause();
         isReviewingCheckpoint = false;
         if (reviewBanner) reviewBanner.style.display = 'none';
-        checkpointOverlay.style.display = 'flex';
+        if (activeCheckpoint) {
+            triggerCheckpoint(activeCheckpoint, true);
+        } else {
+            checkpointOverlay.style.display = 'flex';
+        }
+    });
+
+    // Handle click anywhere on option row (padding, label, radio)
+    quizBody.addEventListener('click', function (e) {
+        const row = e.target.closest('.option-row');
+        if (!row) return;
+        const radio = row.querySelector('input[type="radio"]');
+        if (!radio) return;
+
+        // If the user clicked outside the radio or label directly, check the radio & fire change
+        if (e.target !== radio && !e.target.closest('label')) {
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     });
 
     // Handle option selection styling and clear validation warnings
@@ -479,12 +504,12 @@
             document.querySelectorAll(`input[name="${questionName}"]`).forEach(input => {
                 const row = input.closest('.option-row');
                 if (row) {
-                    row.classList.remove('border-primary', 'bg-primary-subtle');
+                    row.classList.remove('border-primary', 'bg-primary-subtle', 'selected-option');
                 }
             });
             const selectedRow = e.target.closest('.option-row');
             if (selectedRow) {
-                selectedRow.classList.add('border-primary', 'bg-primary-subtle');
+                selectedRow.classList.add('border-primary', 'bg-primary-subtle', 'selected-option');
             }
             const qCard = e.target.closest('.question-card');
             if (qCard) {
@@ -583,7 +608,7 @@
                 retryBtn.className = 'btn btn-outline-danger fw-bold px-4 shadow-sm ms-2';
                 retryBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Try Again';
                 retryBtn.addEventListener('click', () => {
-                    triggerCheckpoint(activeCheckpoint);
+                    triggerCheckpoint(activeCheckpoint, true);
                 });
                 quizFeedback.parentElement.appendChild(retryBtn);
             }
@@ -730,7 +755,7 @@
             // If the video is currently past the checkpoint, immediately trigger the quiz overlay
             if (Math.floor(videoEl.currentTime) >= cp.timestampSeconds) {
                 activeCheckpoint = null; // clear so triggerCheckpoint doesn't guard
-                triggerCheckpoint(cp);
+                triggerCheckpoint(cp, true);
             }
         } catch (err) {
             console.error('Retake failed:', err);
@@ -740,6 +765,30 @@
                 retakeBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Retake Quiz';
             }
         }
+    }
+
+    // Format seconds into MM:SS
+    function formatSeconds(secs) {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Open checkpoint quiz directly when clicking a sidebar item
+    function openCheckpointFromSidebar(cpId) {
+        const cp = checkpointsData.find(c => c.id === cpId);
+        if (!cp) return;
+
+        // Check if locked: video hasn't reached it yet and not completed
+        if (!cp.isPassed && cp.timestampSeconds > maxAllowedTime + 1 && !isVideoCompleted) {
+            alert(`This checkpoint is locked until you watch the video up to ${formatSeconds(cp.timestampSeconds)}.`);
+            return;
+        }
+
+        videoEl.pause();
+        videoEl.currentTime = cp.timestampSeconds;
+        lastValidTime = cp.timestampSeconds;
+        triggerCheckpoint(cp, true);
     }
 </script>
 }

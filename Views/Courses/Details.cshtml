@@ -201,9 +201,16 @@
                                                 }
                                             </td>
                                             <td class="text-end pe-3">
-                                                <a asp-controller="Dashboard" asp-action="EmployeeDetail" asp-route-id="@assign.EmployeeId" class="btn btn-sm btn-outline-secondary" title="View Employee File">
-                                                    <i class="bi bi-eye"></i>
+                                                <a asp-controller="Reports" asp-action="Employee" asp-route-employeeId="@assign.EmployeeId" class="btn btn-sm btn-outline-primary me-1" title="View Progress Report">
+                                                    <i class="bi bi-graph-up me-1"></i>Report
                                                 </a>
+                                                <form asp-controller="Assignments" asp-action="Delete" asp-route-id="@assign.Id" asp-route-returnUrl="@Context.Request.Path" method="post"
+                                                      onsubmit="return confirm('Kick out @(assign.Employee?.FullName ?? "this employee") from this course?');" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Kick Out / Remove from Course">
+                                                        <i class="bi bi-person-x-fill me-1"></i>Kick Out
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     }

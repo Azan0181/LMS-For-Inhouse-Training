@@ -109,10 +109,16 @@
                                     }
                                 </td>
                                 <td class="text-end pe-4">
-                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Revoke this course assignment?');" class="d-inline">
+                                    <a asp-controller="Reports" asp-action="Employee" asp-route-employeeId="@item.EmployeeId"
+                                       class="btn btn-sm btn-outline-primary me-1" title="View Progress Report">
+                                        <i class="bi bi-graph-up me-1"></i>Report
+                                    </a>
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post"
+                                          onsubmit="return confirm('Are you sure you want to kick out @(item.Employee?.FullName ?? "this employee") from @(item.Course?.Title ?? "this training")?');"
+                                          class="d-inline">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoke Assignment">
-                                            <i class="bi bi-trash"></i>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Kick Out / Remove from Training">
+                                            <i class="bi bi-person-x-fill me-1"></i>Kick Out
                                         </button>
                                     </form>
                                 </td>

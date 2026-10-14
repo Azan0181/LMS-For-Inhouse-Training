@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 using VoyageFreightLMS.Data;
 using VoyageFreightLMS.Models;
+using VoyageFreightLMS.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +37,12 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// ── Email Service ──────────────────────────────────────────────────────
+builder.Services.AddSingleton<IEmailService, SmtpEmailService>();
+
+// ── QuestPDF community license ─────────────────────────────────────────
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var app = builder.Build();
 

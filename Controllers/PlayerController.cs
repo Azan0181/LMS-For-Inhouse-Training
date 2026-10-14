@@ -5,23 +5,35 @@ using Microsoft.EntityFrameworkCore;
 using VoyageFreightLMS.Data;
 using VoyageFreightLMS.Models;
 using VoyageFreightLMS.Models.ViewModels;
+using VoyageFreightLMS.Services;
 
 namespace VoyageFreightLMS.Controllers;
 
 /// <summary>
 /// The video player controller.
-/// Serves the watch page and handles AJAX calls for progress saving & quiz submission.
+/// Serves the watch page and handles AJAX calls for progress saving &amp; quiz submission.
 /// </summary>
 [Authorize]
 public class PlayerController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IEmailService _email;
+    private readonly IConfiguration _config;
+    private readonly ILogger<PlayerController> _logger;
 
-    public PlayerController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    public PlayerController(
+        ApplicationDbContext db,
+        UserManager<ApplicationUser> userManager,
+        IEmailService email,
+        IConfiguration config,
+        ILogger<PlayerController> logger)
     {
-        _db = db;
+        _db          = db;
         _userManager = userManager;
+        _email       = email;
+        _config      = config;
+        _logger      = logger;
     }
 
     // ── WATCH ──────────────────────────────────────────────────────────
@@ -280,13 +292,67 @@ public class PlayerController : Controller
         var completedVideos = await _db.VideoProgresses
             .CountAsync(vp => vp.CourseAssignmentId == assignment.Id && vp.IsCompleted);
 
-        if (totalVideos > 0 && completedVideos >= totalVideos)
+        // Only fire if not already completed and all videos have been watched
+        if (assignment.Status != AssignmentStatus.Completed && totalVideos > 0 && completedVideos >= totalVideos)
         {
-            assignment.Status = AssignmentStatus.Completed;
+            assignment.Status      = AssignmentStatus.Completed;
             assignment.CompletedAt = DateTime.UtcNow;
+
+            // ── Load email data NOW while DbContext is still in scope ──
+            var baseUrl     = _config["AppBaseUrl"] ?? $"{Request.Scheme}://{Request.Host}";
+            var employee    = await _userManager.FindByIdAsync(assignment.EmployeeId);
+            var admin       = await _userManager.FindByIdAsync(assignment.AssignedById);
+            var course      = await _db.Courses.FindAsync(assignment.CourseId);
+            var completedAt = assignment.CompletedAt ?? DateTime.UtcNow;
+
+            if (employee != null && course != null)
+            {
+                // Capture all values as plain strings before handing off
+                var reportUrl   = $"{baseUrl}/Reports/Employee/{employee.Id}";
+                var empEmail    = employee.Email    ?? "";
+                var empName     = employee.FullName;
+                var cTitle      = course.Title;
+                var adminEmail  = admin?.Email      ?? "";
+                var adminName   = admin?.FullName   ?? "";
+                var notifyAdmin = admin != null && admin.Id != employee.Id;
+
+                // Fire-and-forget only touches the singleton IEmailService — safe
+                _ = FireCompletionEmailsAsync(
+                    empEmail, empName, cTitle, completedAt, reportUrl,
+                    adminEmail, adminName, notifyAdmin);
+            }
+
             return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Sends completion emails using only plain-value parameters and the singleton
+    /// IEmailService — no scoped services, so safe to fire-and-forget.
+    /// </summary>
+    private async Task FireCompletionEmailsAsync(
+        string empEmail, string empName, string courseTitle,
+        DateTime completedAt, string reportUrl,
+        string adminEmail, string adminName, bool notifyAdmin)
+    {
+        try
+        {
+            _logger.LogInformation("Triggering course completion notification for employee {Emp} ({Course})", empName, courseTitle);
+
+            await _email.SendCourseCompletedToEmployeeAsync(
+                empEmail, empName, courseTitle, completedAt, reportUrl);
+
+            if (notifyAdmin && !string.IsNullOrWhiteSpace(adminEmail))
+            {
+                await _email.SendCourseCompletedToAdminAsync(
+                    adminEmail, adminName, empName, courseTitle, completedAt, reportUrl);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send course completion notification emails for course '{Course}' to {Emp}", courseTitle, empName);
+        }
     }
 }
 

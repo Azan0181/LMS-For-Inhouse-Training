@@ -1,0 +1,306 @@
+@model VoyageFreightLMS.Models.ViewModels.EmployeeProgressReportViewModel
+@{
+    ViewData["Title"] = $"Progress Report – {Model.Employee.FullName}";
+
+    var labels    = Model.Courses.Select(c => c.CourseTitle).ToArray();
+    var pctValues = Model.Courses.Select(c => c.CompletionPercent).ToArray();
+    var quizVals  = Model.Courses.Select(c => c.AvgQuizScore).ToArray();
+
+    var labelsJson = System.Text.Json.JsonSerializer.Serialize(labels);
+    var pctJson    = System.Text.Json.JsonSerializer.Serialize(pctValues);
+    var quizJson   = System.Text.Json.JsonSerializer.Serialize(quizVals);
+}
+
+<style>
+    .report-hero {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        border-radius: 1rem;
+        padding: 2rem 2.5rem;
+        color: #fff;
+        margin-bottom: 1.75rem;
+    }
+    .stat-pill {
+        background: rgba(255,255,255,.15);
+        border-radius: .75rem;
+        padding: .9rem 1.4rem;
+        min-width: 100px;
+        text-align: center;
+        backdrop-filter: blur(4px);
+    }
+    .stat-pill .num  { font-size: 1.9rem; font-weight: 700; line-height: 1; }
+    .stat-pill .lbl  { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; opacity: .8; margin-top: 3px; }
+    .chart-card      { border: none; border-radius: 1rem; box-shadow: 0 2px 14px rgba(0,0,0,.07); background: #fff; }
+    .donut-wrap      { position: relative; max-width: 180px; margin: auto; }
+    .donut-center    { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+    .section-title   { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; font-weight: 700; margin-bottom: .6rem; }
+</style>
+
+<!----  TOP BAR  ---->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+        <a asp-controller="Reports" asp-action="Index"
+           class="btn btn-sm btn-outline-secondary rounded-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <span class="text-muted small">All Reports</span>
+    </div>
+
+    <a asp-controller="Reports" asp-action="DownloadPdf"
+       asp-route-employeeId="@Model.Employee.Id"
+       download
+       class="btn btn-primary px-4 rounded-3 shadow-sm">
+        <i class="bi bi-file-earmark-arrow-down me-1"></i> Download PDF
+    </a>
+</div>
+
+<!----  HERO BANNER  ---->
+<div class="report-hero d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+             style="width:56px;height:56px;background:rgba(255,255,255,.2);font-size:1.2rem;">
+            @(Model.Employee.FirstName.Length > 0 ? Model.Employee.FirstName[0] : ' ')@(Model.Employee.LastName.Length > 0 ? Model.Employee.LastName[0] : ' ')
+        </div>
+        <div>
+            <h2 class="mb-0 fw-bold fs-4">@Model.Employee.FullName</h2>
+            <div class="opacity-75 small mt-1">
+                @Model.Employee.Department &bull; @Model.Employee.JobTitle &bull; @Model.Employee.Email
+            </div>
+            <div class="opacity-50" style="font-size:.75rem; margin-top:4px;">
+                Report generated @Model.ReportGeneratedAt.ToString("MMMM dd, yyyy 'at' HH:mm") UTC
+            </div>
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <div class="stat-pill">
+            <div class="num">@Model.TotalAssigned</div>
+            <div class="lbl">Assigned</div>
+        </div>
+        <div class="stat-pill">
+            <div class="num">@Model.TotalCompleted</div>
+            <div class="lbl">Completed</div>
+        </div>
+        <div class="stat-pill">
+            <div class="num">@(Model.TotalAssigned - Model.TotalCompleted)</div>
+            <div class="lbl">Pending</div>
+        </div>
+        <div class="stat-pill">
+            <div class="num">@Model.OverallCompletionPercent%</div>
+            <div class="lbl">Overall</div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Courses.Any())
+{
+    <!----  CHARTS ROW  ---->
+    <div class="row g-4 mb-4">
+        <!---- Donut: overall  ---->
+        <div class="col-md-4">
+            <div class="chart-card p-4 h-100 d-flex flex-column">
+                <p class="section-title">Overall Completion</p>
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+                    <div class="donut-wrap">
+                        <canvas id="donutChart" height="190"></canvas>
+                        <div class="donut-center">
+                            <div class="fw-bold" style="font-size:1.5rem;">@Model.OverallCompletionPercent%</div>
+                            <div class="text-muted" style="font-size:.75rem;">Done</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!---- Horizontal bar: per-course completion  ---->
+        <div class="col-md-8">
+            <div class="chart-card p-4 h-100">
+                <p class="section-title">Completion % per Course</p>
+                <canvas id="barChart" height="130"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!---- Quiz scores  ---->
+    <div class="chart-card p-4 mb-4">
+        <p class="section-title">Average Quiz Score per Course</p>
+        <canvas id="quizChart" height="80"></canvas>
+    </div>
+}
+
+<!----  DETAIL TABLE  ---->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-transparent border-bottom px-4 py-3">
+        <h6 class="fw-bold mb-0">
+            <i class="bi bi-table me-2 text-primary"></i>Course-by-Course Breakdown
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.Courses.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+                <p class="mb-0">No courses assigned yet.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light small text-uppercase">
+                        <tr>
+                            <th class="ps-4">Course</th>
+                            <th>Status</th>
+                            <th>Videos</th>
+                            <th style="min-width:160px;">Completion</th>
+                            <th>Avg Quiz</th>
+                            <th>Due Date</th>
+                            <th class="small">Completed On</th>
+                            <th class="text-end pe-4 small">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Courses)
+                        {
+                            var barCl = row.CompletionPercent >= 75 ? "bg-success"
+                                      : row.CompletionPercent >= 40 ? "bg-warning"
+                                      : "bg-danger";
+                            var qCl   = row.AvgQuizScore >= 75 ? "text-success"
+                                      : row.AvgQuizScore >= 50 ? "text-warning"
+                                      : "text-danger";
+                            <tr>
+                                <td class="ps-4 fw-semibold small">@row.CourseTitle</td>
+                                <td>
+                                    <span class="badge rounded-pill px-3 py-2 @row.StatusBadgeClass">@row.StatusLabel</span>
+                                </td>
+                                <td class="small text-muted">@row.VideosWatched / @row.TotalVideos</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1 rounded-pill" style="height:6px;">
+                                            <div class="progress-bar @barCl rounded-pill"
+                                                 style="width:@((int)row.CompletionPercent)%"></div>
+                                        </div>
+                                        <span class="small fw-semibold" style="min-width:34px;">@row.CompletionPercent%</span>
+                                    </div>
+                                </td>
+                                <td class="small">
+                                    @if (row.AvgQuizScore > 0)
+                                    {
+                                        <span class="fw-semibold @qCl">@row.AvgQuizScore%</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="small text-muted">
+                                    @(row.DueDate.HasValue ? row.DueDate.Value.ToString("MMM dd, yyyy") : "No deadline")
+                                </td>
+                                <td class="small text-muted">
+                                    @(row.CompletedAt.HasValue ? row.CompletedAt.Value.ToString("MMM dd, yyyy") : "—")
+                                </td>
+                                <td class="text-end pe-4">
+                                    <form asp-controller="Assignments" asp-action="Delete" asp-route-id="@row.Assignment.Id" asp-route-returnUrl="@Context.Request.Path" method="post"
+                                          onsubmit="return confirm('Are you sure you want to kick out @Model.Employee.FullName from @row.CourseTitle?');" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Kick Out / Revoke Course">
+                                            <i class="bi bi-person-x-fill me-1"></i>Kick Out
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+    const labels   = @Html.Raw(labelsJson);
+    const pctData  = @Html.Raw(pctJson);
+    const quizData = @Html.Raw(quizJson);
+
+    const colorForPct = v => v >= 75 ? '#10b981' : v >= 40 ? '#f59e0b' : '#ef4444';
+
+    // Doughnut ────────────────────────────────────────────────────────────
+    const dCtx = document.getElementById('donutChart');
+    if (dCtx) {
+        const done = @Model.OverallCompletionPercent;
+        new Chart(dCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Remaining'],
+                datasets: [{
+                    data: [done, Math.max(0, 100 - done)],
+                    backgroundColor: ['#4f46e5', '#e5e7eb'],
+                    borderWidth: 0,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                cutout: '74%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.parsed}%` } }
+                }
+            }
+        });
+    }
+
+    // Horizontal bar ──────────────────────────────────────────────────────
+    const bCtx = document.getElementById('barChart');
+    if (bCtx) {
+        new Chart(bCtx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Completion %',
+                    data: pctData,
+                    backgroundColor: pctData.map(colorForPct),
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#f3f4f6' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // Quiz bar ────────────────────────────────────────────────────────────
+    const qCtx = document.getElementById('quizChart');
+    if (qCtx) {
+        new Chart(qCtx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Avg Quiz Score %',
+                    data: quizData,
+                    backgroundColor: quizData.map(v =>
+                        v >= 75 ? 'rgba(79,70,229,.8)' : v >= 50 ? 'rgba(245,158,11,.8)' : 'rgba(239,68,68,.8)'),
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#f3f4f6' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+</script>
+}
