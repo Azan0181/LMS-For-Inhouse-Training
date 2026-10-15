@@ -43,7 +43,12 @@ public class AccountController : Controller
             model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
 
         if (result.Succeeded)
-            return LocalRedirect(model.ReturnUrl ?? "/");
+        {
+            if (string.IsNullOrEmpty(model.ReturnUrl) || model.ReturnUrl.Contains("Error", StringComparison.OrdinalIgnoreCase))
+                return RedirectToAction("Index", "Home");
+
+            return LocalRedirect(model.ReturnUrl);
+        }
 
         ModelState.AddModelError(string.Empty, "Invalid email or password.");
         return View(model);
