@@ -1,6 +1,19 @@
 
-.vs/
+# .NET build files
 bin/
 obj/
+.vs/
+artifacts/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+secrets.json
 *.user
-*.suo
+
+# IDE and operating system files
+.idea/
+.DS_Store
+Thumbs.db
